@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.xlsx
+*.parquet
+*.csv
+*.docx
+outputs/
+data/raw/
+data/processed/
+.DS_Store
+.vscode/
+.idea/
