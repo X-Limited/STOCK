@@ -1,19 +1,26 @@
 # RELEASE NOTES
 
-## Version 0.1.0
+## Version 0.2.0
 
-### Enterprise Vending Analytics Pipeline
+### Stable macOS Enterprise Pipeline Release
 
 Features:
 
 - macOS optimized
-- multicore XLSX processing
+- ThreadPool-based parallel XLSX processing
+- stable Python 3.13 compatibility
 - vending stock analytics
 - automated Excel export
-- executive reporting
+- Parquet export
+- executive DOCX reporting
 - KPI calculations
+- risk scoring
 - GitHub-ready architecture
 - scalable processing pipeline
+- robust stock/location file separation
+- automatic location file filtering
+- robust column autodetection
+- debug logging for schema validation
 
 Recommended next steps:
 
@@ -22,3 +29,5 @@ Recommended next steps:
 - forecasting
 - AI-based refill optimization
 - alerting system
+- route optimization
+- anomaly detection
