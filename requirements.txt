@@ -1,0 +1,10 @@
+pandas
+numpy
+openpyxl
+pyarrow
+matplotlib
+prophet
+python-docx
+xlsxwriter
+scikit-learn
+xgboost
