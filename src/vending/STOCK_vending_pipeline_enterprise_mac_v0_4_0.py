@@ -103,7 +103,8 @@ def main():
         stock, ["MachineNumber", "Machine Number", "VM", "Machine", "Automat"]
     )
 
-    product_col = detect_column(stock, ["Product/ComponentName", "Product", "ComponentName"])
+    # NOTE: product_col detection kept for future column-based filtering; not used yet
+    _product_col = detect_column(stock, ["Product/ComponentName", "Product", "ComponentName"])
 
     capacity_col = detect_column(stock, ["Product/Component capacity", "Capacity"])
 
