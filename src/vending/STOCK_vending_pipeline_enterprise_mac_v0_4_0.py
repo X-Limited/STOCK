@@ -50,12 +50,7 @@ def load_stock_file(file):
         df = pd.read_excel(file, engine="openpyxl")
         df.columns = [str(c).strip() for c in df.columns]
 
-        forbidden = [
-            "CZ automatu",
-            "Středisko",
-            "Název místa",
-            "Umístění"
-        ]
+        forbidden = ["CZ automatu", "Středisko", "Název místa", "Umístění"]
 
         if any(col in df.columns for col in forbidden):
             print(f"SKIPPED LOCATION FILE: {os.path.basename(file)}")
@@ -74,16 +69,14 @@ def main():
     root.withdraw()
 
     stock_files = filedialog.askopenfilenames(
-        title="Select STOCK XLSX files",
-        filetypes=[("Excel files", "*.xlsx")]
+        title="Select STOCK XLSX files", filetypes=[("Excel files", "*.xlsx")]
     )
 
     if len(stock_files) == 0:
         raise Exception("No stock files selected.")
 
     location_file = filedialog.askopenfilename(
-        title="Select LOCATION XLSX file",
-        filetypes=[("Excel files", "*.xlsx")]
+        title="Select LOCATION XLSX file", filetypes=[("Excel files", "*.xlsx")]
     )
 
     if not location_file:
@@ -95,12 +88,7 @@ def main():
     locations = pd.read_excel(location_file)
     locations.columns = [str(c).strip() for c in locations.columns]
 
-    vm_col = detect_column(locations, [
-        "CZ automatu",
-        "VM",
-        "MachineNumber",
-        "Automat"
-    ])
+    vm_col = detect_column(locations, ["CZ automatu", "VM", "MachineNumber", "Automat"])
 
     locations["vm_id"] = locations[vm_col].astype(str)
 
@@ -110,30 +98,15 @@ def main():
     frames = [f for f in frames if len(f) > 0]
     stock = pd.concat(frames, ignore_index=True)
 
-    machine_col = detect_column(stock, [
-        "MachineNumber",
-        "Machine Number",
-        "VM",
-        "Machine",
-        "Automat"
-    ])
+    machine_col = detect_column(
+        stock, ["MachineNumber", "Machine Number", "VM", "Machine", "Automat"]
+    )
 
-    product_col = detect_column(stock, [
-        "Product/ComponentName",
-        "Product",
-        "ComponentName"
-    ])
+    product_col = detect_column(stock, ["Product/ComponentName", "Product", "ComponentName"])
 
-    capacity_col = detect_column(stock, [
-        "Product/Component capacity",
-        "Capacity"
-    ])
+    capacity_col = detect_column(stock, ["Product/Component capacity", "Capacity"])
 
-    fill_col = detect_column(stock, [
-        "Product/Component Fill quantity",
-        "Fill quantity",
-        "Fill"
-    ])
+    fill_col = detect_column(stock, ["Product/Component Fill quantity", "Fill quantity", "Fill"])
 
     stock["vm_id"] = stock[machine_col].astype(str)
     stock["capacity"] = pd.to_numeric(stock[capacity_col], errors="coerce")
@@ -142,69 +115,46 @@ def main():
     stock = stock[stock["capacity"].fillna(-1) >= 0]
 
     stock["fill_percent"] = np.where(
-        stock["capacity"] > 0,
-        (stock["fill_qty"] / stock["capacity"]) * 100,
-        np.nan
+        stock["capacity"] > 0, (stock["fill_qty"] / stock["capacity"]) * 100, np.nan
     )
 
     stock["status"] = stock["fill_percent"].apply(classify)
 
     merged = stock.merge(locations, on="vm_id", how="left")
 
-    machine_summary = merged.groupby("vm_id").agg(
-        avg_fill=("fill_percent", "mean"),
-        critical=("status", lambda x: (x == "CRITICAL").sum()),
-        empty=("status", lambda x: (x == "EMPTY").sum())
-    ).reset_index()
-
-    machine_summary["risk_score"] = (
-        machine_summary["critical"] * 2 +
-        machine_summary["empty"] * 3 +
-        (100 - machine_summary["avg_fill"].fillna(0))
+    machine_summary = (
+        merged.groupby("vm_id")
+        .agg(
+            avg_fill=("fill_percent", "mean"),
+            critical=("status", lambda x: (x == "CRITICAL").sum()),
+            empty=("status", lambda x: (x == "EMPTY").sum()),
+        )
+        .reset_index()
     )
 
-    top_risk = machine_summary.sort_values(
-        "risk_score",
-        ascending=False
-    ).head(50)
+    machine_summary["risk_score"] = (
+        machine_summary["critical"] * 2
+        + machine_summary["empty"] * 3
+        + (100 - machine_summary["avg_fill"].fillna(0))
+    )
+
+    top_risk = machine_summary.sort_values("risk_score", ascending=False).head(50)
 
     for col in merged.columns:
         if merged[col].dtype == "object":
             merged[col] = merged[col].astype(str)
 
-    merged.to_parquet(
-        output_dir / "merged_data.parquet",
-        index=False,
-        engine="pyarrow"
-    )
+    merged.to_parquet(output_dir / "merged_data.parquet", index=False, engine="pyarrow")
 
-    merged.head(1000000).to_csv(
-        output_dir / "merged_data_sample.csv",
-        index=False
-    )
+    merged.head(1000000).to_csv(output_dir / "merged_data_sample.csv", index=False)
 
-    with pd.ExcelWriter(
-        output_dir / "STOCK_VENDING_ANALYTICS.xlsx",
-        engine="xlsxwriter"
-    ) as writer:
+    with pd.ExcelWriter(output_dir / "STOCK_VENDING_ANALYTICS.xlsx", engine="xlsxwriter") as writer:
+        machine_summary.to_excel(writer, sheet_name="Machine_Summary", index=False)
 
-        machine_summary.to_excel(
-            writer,
-            sheet_name="Machine_Summary",
-            index=False
-        )
-
-        top_risk.to_excel(
-            writer,
-            sheet_name="Top_Risk_VM",
-            index=False
-        )
+        top_risk.to_excel(writer, sheet_name="Top_Risk_VM", index=False)
 
     plt.figure(figsize=(12, 6))
-    plt.bar(
-        top_risk["vm_id"].astype(str),
-        top_risk["risk_score"]
-    )
+    plt.bar(top_risk["vm_id"].astype(str), top_risk["risk_score"])
     plt.xticks(rotation=90)
     plt.tight_layout()
 

@@ -13,48 +13,46 @@ from docx import Document
 import warnings
 import os
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 CPU_COUNT = max(mp.cpu_count() - 1, 1)
-print(f'CPU CORES: {mp.cpu_count()} | USING: {CPU_COUNT}')
+print(f"CPU CORES: {mp.cpu_count()} | USING: {CPU_COUNT}")
 
 root = tk.Tk()
 root.withdraw()
 
 stock_files = filedialog.askopenfilenames(
-    title='Select STOCK XLSX files',
-    filetypes=[('Excel files', '*.xlsx')]
+    title="Select STOCK XLSX files", filetypes=[("Excel files", "*.xlsx")]
 )
 
 location_file = filedialog.askopenfilename(
-    title='Select LOCATION XLSX file',
-    filetypes=[('Excel files', '*.xlsx')]
+    title="Select LOCATION XLSX file", filetypes=[("Excel files", "*.xlsx")]
 )
 
 if len(stock_files) == 0:
-    raise Exception('No stock files selected.')
+    raise Exception("No stock files selected.")
 
 if not location_file:
-    raise Exception('No location file selected.')
+    raise Exception("No location file selected.")
 
-OUTPUT_DIR = Path.home() / 'Desktop' / 'VENDING_OUTPUT'
+OUTPUT_DIR = Path.home() / "Desktop" / "VENDING_OUTPUT"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 locations = pd.read_excel(location_file)
 locations.columns = [str(c).strip() for c in locations.columns]
 
-vm_col = 'CZ automatu' if 'CZ automatu' in locations.columns else locations.columns[0]
-locations['vm_id'] = locations[vm_col].astype(str)
+vm_col = "CZ automatu" if "CZ automatu" in locations.columns else locations.columns[0]
+locations["vm_id"] = locations[vm_col].astype(str)
 
 
 def load_stock_file(file):
     try:
-        df = pd.read_excel(file, engine='openpyxl')
+        df = pd.read_excel(file, engine="openpyxl")
         df.columns = [str(c).strip() for c in df.columns]
-        df['source_file'] = os.path.basename(file)
+        df["source_file"] = os.path.basename(file)
         return df
     except Exception as e:
-        print('ERROR:', file, e)
+        print("ERROR:", file, e)
         return pd.DataFrame()
 
 
@@ -64,45 +62,41 @@ with ProcessPoolExecutor(max_workers=CPU_COUNT) as executor:
 frames = [f for f in frames if len(f) > 0]
 stock = pd.concat(frames, ignore_index=True)
 
-machine_col = 'MachineNumber'
-product_col = 'Product/ComponentName'
-capacity_col = 'Product/Component capacity'
-fill_col = 'Product/Component Fill quantity'
+machine_col = "MachineNumber"
+product_col = "Product/ComponentName"
+capacity_col = "Product/Component capacity"
+fill_col = "Product/Component Fill quantity"
 
-stock['vm_id'] = stock[machine_col].astype(str)
-stock['capacity'] = pd.to_numeric(stock[capacity_col], errors='coerce')
-stock['fill_qty'] = pd.to_numeric(stock[fill_col], errors='coerce')
+stock["vm_id"] = stock[machine_col].astype(str)
+stock["capacity"] = pd.to_numeric(stock[capacity_col], errors="coerce")
+stock["fill_qty"] = pd.to_numeric(stock[fill_col], errors="coerce")
 
-stock['fill_percent'] = np.where(
-    stock['capacity'] > 0,
-    (stock['fill_qty'] / stock['capacity']) * 100,
-    np.nan
+stock["fill_percent"] = np.where(
+    stock["capacity"] > 0, (stock["fill_qty"] / stock["capacity"]) * 100, np.nan
 )
 
-merged = stock.merge(locations, on='vm_id', how='left')
+merged = stock.merge(locations, on="vm_id", how="left")
 
-machine_summary = merged.groupby('vm_id').agg(
-    avg_fill=('fill_percent', 'mean')
-).reset_index()
+machine_summary = merged.groupby("vm_id").agg(avg_fill=("fill_percent", "mean")).reset_index()
 
-excel_path = OUTPUT_DIR / 'VENDING_ANALYTICS.xlsx'
+excel_path = OUTPUT_DIR / "VENDING_ANALYTICS.xlsx"
 
-with pd.ExcelWriter(excel_path, engine='xlsxwriter') as writer:
-    merged.to_excel(writer, sheet_name='Merged_Data', index=False)
-    machine_summary.to_excel(writer, sheet_name='Machine_Summary', index=False)
+with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+    merged.to_excel(writer, sheet_name="Merged_Data", index=False)
+    machine_summary.to_excel(writer, sheet_name="Machine_Summary", index=False)
 
 plt.figure(figsize=(12, 6))
-plt.hist(machine_summary['avg_fill'].dropna(), bins=20)
-plt.title('Average Fill Distribution')
+plt.hist(machine_summary["avg_fill"].dropna(), bins=20)
+plt.title("Average Fill Distribution")
 plt.tight_layout()
-plt.savefig(OUTPUT_DIR / 'fill_distribution.png')
+plt.savefig(OUTPUT_DIR / "fill_distribution.png")
 plt.close()
 
 report = Document()
-report.add_heading('Vending Analytics Executive Report', level=1)
-report.add_paragraph(f'Analyzed machines: {merged["vm_id"].nunique():,}')
-report.add_paragraph(f'Rows processed: {len(merged):,}')
-report.save(OUTPUT_DIR / 'EXECUTIVE_REPORT.docx')
+report.add_heading("Vending Analytics Executive Report", level=1)
+report.add_paragraph(f"Analyzed machines: {merged['vm_id'].nunique():,}")
+report.add_paragraph(f"Rows processed: {len(merged):,}")
+report.save(OUTPUT_DIR / "EXECUTIVE_REPORT.docx")
 
-print('PIPELINE FINISHED')
+print("PIPELINE FINISHED")
 print(OUTPUT_DIR)

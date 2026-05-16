@@ -82,16 +82,14 @@ def main():
     print("\nSELECT ONLY STOCK XLSX FILES")
     print("DO NOT SELECT LOCATION FILE HERE")
     stock_files = filedialog.askopenfilenames(
-        title="Select STOCK XLSX files only",
-        filetypes=[("Excel files", "*.xlsx")]
+        title="Select STOCK XLSX files only", filetypes=[("Excel files", "*.xlsx")]
     )
     if len(stock_files) == 0:
         raise Exception("No stock files selected.")
 
     print("\nSELECT LOCATION FILE")
     location_file = filedialog.askopenfilename(
-        title="Select LOCATION XLSX file",
-        filetypes=[("Excel files", "*.xlsx")]
+        title="Select LOCATION XLSX file", filetypes=[("Excel files", "*.xlsx")]
     )
     if not location_file:
         raise Exception("No location file selected.")
@@ -121,7 +119,9 @@ def main():
     print("Detected stock columns:")
     print(list(stock.columns))
 
-    machine_col = detect_column(stock, ["MachineNumber", "Machine Number", "VM", "Machine", "Automat"])
+    machine_col = detect_column(
+        stock, ["MachineNumber", "Machine Number", "VM", "Machine", "Automat"]
+    )
     product_col = detect_column(stock, ["Product/ComponentName", "Product", "ComponentName"])
     capacity_col = detect_column(stock, ["Product/Component capacity", "Capacity"])
     fill_col = detect_column(stock, ["Product/Component Fill quantity", "Fill quantity", "Fill"])
@@ -134,13 +134,17 @@ def main():
     if fill_col is None:
         missing.append("fill quantity column")
     if missing:
-        raise Exception(f"Missing required columns: {missing}. Available columns: {list(stock.columns)}")
+        raise Exception(
+            f"Missing required columns: {missing}. Available columns: {list(stock.columns)}"
+        )
 
     stock["vm_id"] = stock[machine_col].astype(str)
     stock["capacity"] = pd.to_numeric(stock[capacity_col], errors="coerce")
     stock["fill_qty"] = pd.to_numeric(stock[fill_col], errors="coerce")
     stock = stock[stock["capacity"].fillna(-1) >= 0]
-    stock["fill_percent"] = np.where(stock["capacity"] > 0, (stock["fill_qty"] / stock["capacity"]) * 100, np.nan)
+    stock["fill_percent"] = np.where(
+        stock["capacity"] > 0, (stock["fill_qty"] / stock["capacity"]) * 100, np.nan
+    )
     stock["missing_qty"] = stock["capacity"] - stock["fill_qty"]
     stock["status"] = stock["fill_percent"].apply(classify)
 
@@ -158,9 +162,9 @@ def main():
 
     machine_summary = merged.groupby("vm_id").agg(**agg).reset_index()
     machine_summary["risk_score"] = (
-        machine_summary["critical"] * 2 +
-        machine_summary["empty"] * 3 +
-        (100 - machine_summary["avg_fill"].fillna(0))
+        machine_summary["critical"] * 2
+        + machine_summary["empty"] * 3
+        + (100 - machine_summary["avg_fill"].fillna(0))
     )
     machine_summary = machine_summary.sort_values("risk_score", ascending=False)
 
