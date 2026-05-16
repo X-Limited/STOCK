@@ -10,18 +10,19 @@ Fixes:
 - exports Excel, Parquet, chart and DOCX executive report
 """
 
-import tkinter as tk
-from tkinter import filedialog
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 import multiprocessing as mp
+import os
+import tkinter as tk
+import warnings
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from tkinter import filedialog
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from docx import Document
 from docx.shared import Inches
-import warnings
-import os
 
 warnings.filterwarnings("ignore")
 CPU_COUNT = max(mp.cpu_count() - 1, 1)
